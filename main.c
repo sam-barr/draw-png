@@ -6,6 +6,7 @@
 #include <png.h>
 
 #include <xcb/xcb.h>
+#include <xcb/xcb_image.h>
 
 #define DRAW_PNG_VERSION "1.6.37"
 #define PNG_SIG_LENGTH 8
@@ -241,13 +242,19 @@ void draw_save_image(struct draw_image *image, const char *file_name) {
         draw_png_writer_destroy(&writer);
 }
 
+/*
+TODO: https://stackoverflow.com/questions/43029489/how-to-display-an-image-into-an-xcb-window
+^^^ stackoverflow for loading an image
+*/
 int main(void) {
         xcb_connection_t *connection;
         xcb_screen_t *screen;
         xcb_window_t window;
-        int screen_number = SCREEN_NUMBER, mask, values[1];
 
-        connection = xcb_connect(NULL, &screen_number);
+        {
+                int screen_number = SCREEN_NUMBER;
+                connection = xcb_connect(NULL, &screen_number);
+        }
         if (xcb_connection_has_error(connection)) {
                 xcb_disconnect(connection);
                 fprintf(stderr, "Unable to connect to X\n");
@@ -256,19 +263,24 @@ int main(void) {
 
         screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
         window = xcb_generate_id(connection);
-        mask = XCB_CW_BACK_PIXEL;
-        values[0] = screen->black_pixel;
-        xcb_create_window(
-                connection,
-                XCB_COPY_FROM_PARENT, /* copy depth from parent */
-                window,
-                screen->root,
-                0, 0, 1, 1, /* x,y, width, height */
-                0, /* border width */
-                XCB_WINDOW_CLASS_INPUT_OUTPUT,
-                screen->root_visual,
-                mask, values);
-        xcb_map_window(connection, window);
+
+        {
+                int mask, values[1];
+                mask = XCB_CW_BACK_PIXEL;
+                values[0] = screen->black_pixel;
+                xcb_create_window(
+                                connection,
+                                XCB_COPY_FROM_PARENT, /* copy depth from parent */
+                                window,
+                                screen->root,
+                                0, 0, 1, 1, /* x,y, width, height */
+                                0, /* border width */
+                                XCB_WINDOW_CLASS_INPUT_OUTPUT,
+                                screen->root_visual,
+                                mask, values);
+                xcb_map_window(connection, window);
+        }
+
         xcb_flush(connection);
 
         getchar();
